@@ -1,0 +1,13 @@
+{
+  "name": "pula-torto",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Endless runner mobile do Torto, pronto para Railway.",
+  "scripts": {
+    "build": "node --check server.js && node --check game.js",
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

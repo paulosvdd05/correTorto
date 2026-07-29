@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#100719" />
+    <meta
+      name="description"
+      content="PULA TORTO — corra, pule os copões e sobreviva à quadrinha."
+    />
+    <meta property="og:title" content="PULA TORTO" />
+    <meta property="og:description" content="O corre mais torto da quadrinha." />
+    <meta property="og:image" content="__SITE_URL__/public/og.png" />
+    <meta property="og:type" content="website" />
+    <title>PULA TORTO — o corre da quadrinha</title>
+    <link rel="icon" href="public/gin-cup.png" />
+    <link rel="preload" as="image" href="public/city-bg.png" />
+    <link rel="preload" as="image" href="public/torto.png" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="noise" aria-hidden="true"></div>
+    <div class="ticker" aria-hidden="true">
+      <div>PULA TORTO • QUADRINHA CITY • NÃO DERRUBA O COPO • PULA TORTO • QUADRINHA CITY •</div>
+    </div>
+
+    <main class="app-shell">
+      <header class="hero">
+        <div class="edition">EDIÇÃO // CORRE INFINITO</div>
+        <h1 aria-label="Pula Torto">
+          <span>PULA</span>
+          <span>TORTO</span>
+        </h1>
+        <p>Pule os copões. Abaixe dos voadores. Não vacila.</p>
+      </header>
+
+      <section class="game-card" aria-label="Jogo Pula Torto">
+        <div class="game-bg" aria-hidden="true"></div>
+        <div class="sun" aria-hidden="true"></div>
+        <div class="hud">
+          <div class="hud-chip">
+            <span>PONTOS</span>
+            <strong id="score">00000</strong>
+          </div>
+          <div class="hud-chip hud-chip--best">
+            <span>RECORDE</span>
+            <strong id="bestScore">00000</strong>
+          </div>
+          <button class="sound-button" id="soundButton" type="button" aria-label="Ativar ou desativar som">
+            SOM ON
+          </button>
+        </div>
+
+        <canvas id="gameCanvas" aria-label="Área do jogo"></canvas>
+
+        <div class="start-screen" id="startScreen">
+          <div class="stamp">PRONTO?</div>
+          <h2>O CORRE COMEÇOU</h2>
+          <p>
+            <b>Pule</b> copões e elefantes.<br />
+            <b>Abaixe</b> do beck e do sapo.
+          </p>
+          <button class="primary-button" id="startButton" type="button">COMEÇAR O CORRE</button>
+          <small>ESPAÇO / ↑ pula · ↓ abaixa</small>
+        </div>
+
+        <div class="flash" id="flash" aria-hidden="true"></div>
+      </section>
+
+      <section class="controls" aria-label="Controles do jogo">
+        <button class="control-button jump-button" id="jumpButton" type="button">
+          <span>↑</span>
+          PULAR
+        </button>
+        <button class="control-button duck-button" id="duckButton" type="button">
+          <span>↓</span>
+          ABAIXAR
+        </button>
+      </section>
+
+      <section class="ranking-card" aria-labelledby="rankingTitle">
+        <div class="ranking-head">
+          <div>
+            <p class="eyebrow">RANKING GLOBAL</p>
+            <h2 id="rankingTitle">O 00 DA QUADRINHA É</h2>
+            <strong class="top-player" id="topPlayer">NINGUÉM AINDA</strong>
+          </div>
+          <button class="refresh-button" id="refreshRanking" type="button">ATUALIZAR ↻</button>
+        </div>
+        <p class="ranking-status" id="rankingStatus">Buscando os tortos...</p>
+        <ol class="ranking-list" id="rankingList"></ol>
+      </section>
+    </main>
+
+    <div class="modal" id="gameOverModal" aria-hidden="true">
+      <div class="modal-backdrop"></div>
+      <div class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="gameOverTitle">
+        <div class="crash-label">DEU RUIM</div>
+        <h2 id="gameOverTitle">O TORTO TROPEÇOU</h2>
+        <p class="final-copy">Seu corre rendeu</p>
+        <strong class="final-score" id="finalScore">00000</strong>
+
+        <form id="scoreForm">
+          <label for="playerName">ASSINE SEU FEITO</label>
+          <div class="name-row">
+            <input
+              id="playerName"
+              name="name"
+              maxlength="16"
+              autocomplete="nickname"
+              placeholder="SEU NOME"
+              required
+            />
+            <button class="primary-button" id="saveScoreButton" type="submit">SALVAR</button>
+          </div>
+          <p class="form-message" id="formMessage" aria-live="polite"></p>
+        </form>
+
+        <button class="restart-button" id="restartButton" type="button">↻ TENTAR DE NOVO</button>
+      </div>
+    </div>
+
+    <script src="game.js"></script>
+  </body>
+</html>
