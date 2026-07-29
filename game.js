@@ -22,13 +22,47 @@
   const topPlayer = document.querySelector("#topPlayer");
   const refreshRanking = document.querySelector("#refreshRanking");
   const flash = document.querySelector("#flash");
+  const achievementToast = document.querySelector("#achievementToast");
+  const achievementIcon = document.querySelector("#achievementIcon");
+  const achievementTitle = document.querySelector("#achievementTitle");
+  const skinUnlockModal = document.querySelector("#skinUnlockModal");
+  const skinSwitchButton = document.querySelector("#skinSwitchButton");
+  const gameOverSkinButton = document.querySelector("#gameOverSkinButton");
+  const skinBadge = document.querySelector("#skinBadge");
+  const skinTitle = document.querySelector("#skinTitle");
+  const skinShowcaseImage = document.querySelector("#skinShowcaseImage");
+  const skinShowcaseEcho = document.querySelector("#skinShowcaseEcho");
+  const becomeNanzaoButton = document.querySelector("#becomeNanzaoButton");
+  const stayTortoButton = document.querySelector("#stayTortoButton");
+  const becomePizzaGuidoButton = document.querySelector("#becomePizzaGuidoButton");
 
   const ASSET_PATHS = {
     torto: "public/torto.png",
+    nanzao: "public/nanzao.png",
+    pizzaGuido: "public/pizza-guido.png",
+    pineapple: "public/pineapple.png",
+    pizzaCollectible: "public/pizza-collectible.png",
     cup: "public/gin-cup.png",
     frog: "public/frog.png",
     elephant: "public/elephant.png",
     beck: "public/beck.png",
+  };
+
+  const SKIN_DETAILS = {
+    torto: {
+      name: "TORTO",
+      asset: "public/torto.png",
+    },
+    nanzao: {
+      name: "NANZÃO",
+      asset: "public/nanzao.png",
+      collectible: "public/pineapple.png",
+    },
+    pizzaGuido: {
+      name: "PIZZAGUIDO",
+      asset: "public/pizza-guido.png",
+      collectible: "public/pizza-collectible.png",
+    },
   };
 
   const images = {};
@@ -38,6 +72,14 @@
   const LOCAL_RANKING_KEY = "pulaTortoRanking";
   const BEST_KEY = "pulaTortoBest";
   const NAME_KEY = "pulaTortoName";
+  const NANZAO_UNLOCKED_KEY = "pulaTortoNanzaoUnlocked";
+  const PIZZA_GUIDO_UNLOCKED_KEY = "pulaTortoPizzaGuidoUnlocked";
+  const SKIN_KEY = "pulaTortoSelectedSkin";
+  const NANZAO_SCORE = 1234;
+  const PIZZA_GUIDO_SCORE = 2500;
+  const SPEED_STEP_POINTS = 400;
+  const SPEED_STEP_AMOUNT = 36;
+  const MAX_SPEED = 598;
   const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
   let width = 0;
@@ -50,6 +92,7 @@
   let score = 0;
   let bestScore = Number(localStorage.getItem(BEST_KEY)) || 0;
   let speed = 310;
+  let speedLevel = 0;
   let spawnTimer = 1.4;
   let beckTimer = 14;
   let groundOffset = 0;
@@ -59,6 +102,21 @@
   let currentRanking = [];
   let submittedThisRun = false;
   let screenShake = 0;
+  let pineappleSpawned = false;
+  let pineappleRetryAt = 0;
+  let pizzaSpawned = false;
+  let pizzaRetryAt = 0;
+  let achievementTimer = 0;
+  let unlockedSkinThisRun = null;
+  let skinModalReturn = "menu";
+  let nanzaoUnlocked = localStorage.getItem(NANZAO_UNLOCKED_KEY) === "1";
+  let pizzaGuidoUnlocked = localStorage.getItem(PIZZA_GUIDO_UNLOCKED_KEY) === "1";
+  const savedSkin = localStorage.getItem(SKIN_KEY);
+  let currentSkin =
+    (savedSkin === "nanzao" && nanzaoUnlocked) ||
+    (savedSkin === "pizzaGuido" && pizzaGuidoUnlocked)
+      ? savedSkin
+      : "torto";
 
   const player = {
     x: 0,
@@ -109,7 +167,9 @@
 
   function playerDimensions() {
     const standingHeight = clamp(height * 0.31, 126, 178);
-    const standingWidth = standingHeight * 0.39;
+    const skinRatio =
+      currentSkin === "nanzao" ? 0.66 : currentSkin === "pizzaGuido" ? 0.63 : 0.39;
+    const standingWidth = standingHeight * skinRatio;
     const ducking = controls.duck && !player.airborne;
     return ducking
       ? { width: standingWidth * 1.22, height: standingHeight * 0.52 }
@@ -170,10 +230,16 @@
     runTime = 0;
     score = 0;
     speed = 310;
+    speedLevel = 0;
     spawnTimer = 1.55;
     beckTimer = 12 + Math.random() * 5;
     groundOffset = 0;
     submittedThisRun = false;
+    pineappleSpawned = false;
+    pineappleRetryAt = 0;
+    pizzaSpawned = false;
+    pizzaRetryAt = 0;
+    unlockedSkinThisRun = null;
     obstacles.length = 0;
     particles.length = 0;
     player.jumpY = 0;
@@ -184,6 +250,10 @@
     startScreen.classList.add("is-hidden");
     modal.classList.remove("is-open");
     modal.setAttribute("aria-hidden", "true");
+    skinUnlockModal.classList.remove("is-open");
+    skinUnlockModal.setAttribute("aria-hidden", "true");
+    achievementToast.classList.remove("is-visible");
+    window.clearTimeout(achievementTimer);
     scoreElement.textContent = "00000";
     formMessage.textContent = "";
     lastTime = performance.now();
@@ -231,13 +301,13 @@
     };
 
     if (type === "cup") {
-      base.height = clamp(height * (0.15 + Math.random() * 0.028), 64, 90);
+      base.height = clamp(height * (0.1275 + Math.random() * 0.0238), 54, 77);
       base.width = base.height * 0.71;
     } else if (type === "frog") {
       base.width = clamp(width * 0.22, 84, 126);
       base.height = base.width * 0.73;
     } else {
-      base.width = clamp(width * 0.275, 108, 158);
+      base.width = clamp(width * 0.22, 86, 126);
       base.height = base.width * 0.72;
       base.multiplier = 1.38;
     }
@@ -260,6 +330,99 @@
     beckTimer = 13 + Math.random() * 9;
   }
 
+  function spawnPineapple() {
+    const itemWidth = clamp(width * 0.12, 44, 66);
+    obstacles.push({
+      type: "pineapple",
+      x: width + 70,
+      y: groundY - clamp(height * 0.24, 108, 142),
+      width: itemWidth,
+      height: itemWidth * 1.18,
+      multiplier: 0.93,
+      passed: true,
+      phase: 0,
+      collected: false,
+    });
+    pineappleSpawned = true;
+  }
+
+  function spawnPizza() {
+    const itemWidth = clamp(width * 0.16, 58, 86);
+    obstacles.push({
+      type: "pizzaCollectible",
+      x: width + 78,
+      y: groundY - clamp(height * 0.27, 120, 154),
+      width: itemWidth,
+      height: itemWidth,
+      multiplier: 0.96,
+      passed: true,
+      phase: Math.PI / 2,
+      collected: false,
+    });
+    pizzaSpawned = true;
+  }
+
+  function showAchievement(skin) {
+    const details = SKIN_DETAILS[skin];
+    achievementIcon.src = details.collectible;
+    achievementTitle.textContent = `VOCÊ ACHOU O ${details.name}`;
+    achievementToast.classList.remove("is-visible");
+    void achievementToast.offsetWidth;
+    achievementToast.classList.add("is-visible");
+    window.clearTimeout(achievementTimer);
+    achievementTimer = window.setTimeout(() => {
+      achievementToast.classList.remove("is-visible");
+    }, 4300);
+  }
+
+  function updateSkinUI() {
+    skinSwitchButton.hidden = false;
+    gameOverSkinButton.hidden = false;
+    const nanzaoSelected = currentSkin === "nanzao";
+    const pizzaSelected = currentSkin === "pizzaGuido";
+    const tortoSelected = currentSkin === "torto";
+    becomeNanzaoButton.disabled = !nanzaoUnlocked;
+    becomePizzaGuidoButton.disabled = !pizzaGuidoUnlocked;
+    becomeNanzaoButton.classList.toggle("is-locked", !nanzaoUnlocked);
+    becomePizzaGuidoButton.classList.toggle("is-locked", !pizzaGuidoUnlocked);
+    becomeNanzaoButton.classList.toggle("is-selected", nanzaoSelected);
+    becomePizzaGuidoButton.classList.toggle("is-selected", pizzaSelected);
+    stayTortoButton.classList.toggle("is-selected", tortoSelected);
+    becomeNanzaoButton.setAttribute("aria-pressed", String(nanzaoSelected));
+    becomePizzaGuidoButton.setAttribute("aria-pressed", String(pizzaSelected));
+    stayTortoButton.setAttribute("aria-pressed", String(tortoSelected));
+  }
+
+  function collectPineapple(obstacle) {
+    if (obstacle.collected) return;
+    obstacle.collected = true;
+    obstacle.x = -500;
+    nanzaoUnlocked = true;
+    unlockedSkinThisRun = "nanzao";
+    localStorage.setItem(NANZAO_UNLOCKED_KEY, "1");
+    updateSkinUI();
+    score += 100;
+    emitDust(player.x + 40, groundY - 100, 34, "#dfff00");
+    emitDust(player.x + 40, groundY - 100, 24, "#ff2da8");
+    showAchievement("nanzao");
+    blip(1180, 0.22, "square", 0.055);
+  }
+
+  function collectPizza(obstacle) {
+    if (obstacle.collected) return;
+    obstacle.collected = true;
+    obstacle.x = -500;
+    pizzaGuidoUnlocked = true;
+    unlockedSkinThisRun = "pizzaGuido";
+    localStorage.setItem(PIZZA_GUIDO_UNLOCKED_KEY, "1");
+    updateSkinUI();
+    score += 150;
+    emitDust(player.x + 42, groundY - 112, 38, "#ff9f1c");
+    emitDust(player.x + 42, groundY - 112, 26, "#ff2da8");
+    showAchievement("pizzaGuido");
+    blip(1320, 0.24, "square", 0.06);
+  }
+
   function updateObstacles(dt) {
     spawnTimer -= dt;
     beckTimer -= dt;
@@ -280,6 +443,26 @@
       !obstacles.some((obstacle) => obstacle.x > width * 0.52)
     ) {
       spawnBeck();
+    }
+
+    if (
+      !nanzaoUnlocked &&
+      !pineappleSpawned &&
+      score >= NANZAO_SCORE &&
+      runTime >= pineappleRetryAt &&
+      !obstacles.some((obstacle) => obstacle.x > width * 0.5)
+    ) {
+      spawnPineapple();
+    }
+
+    if (
+      !pizzaGuidoUnlocked &&
+      !pizzaSpawned &&
+      score >= PIZZA_GUIDO_SCORE &&
+      runTime >= pizzaRetryAt &&
+      !obstacles.some((obstacle) => obstacle.x > width * 0.5)
+    ) {
+      spawnPizza();
     }
 
     obstacles.forEach((obstacle) => {
@@ -309,7 +492,15 @@
     });
 
     while (obstacles.length && obstacles[0].x + obstacles[0].width < -80) {
-      obstacles.shift();
+      const expired = obstacles.shift();
+      if (expired.type === "pineapple" && !expired.collected) {
+        pineappleSpawned = false;
+        pineappleRetryAt = runTime + 7;
+      }
+      if (expired.type === "pizzaCollectible" && !expired.collected) {
+        pizzaSpawned = false;
+        pizzaRetryAt = runTime + 7;
+      }
     }
   }
 
@@ -322,6 +513,16 @@
   }
 
   function obstacleRect(obstacle) {
+    if (obstacle.type === "pineapple" || obstacle.type === "pizzaCollectible") {
+      const bob = Math.sin(obstacle.phase * 0.8) * 7;
+      return {
+        x: obstacle.x + obstacle.width * 0.16,
+        y: obstacle.y + bob + obstacle.height * 0.12,
+        width: obstacle.width * 0.68,
+        height: obstacle.height * 0.76,
+      };
+    }
+
     if (obstacle.type === "beck") {
       const bob = Math.sin(obstacle.phase) * 4;
       return {
@@ -405,6 +606,41 @@
     }
   }
 
+  function openGameOver() {
+    modal.classList.add("is-open");
+    modal.setAttribute("aria-hidden", "false");
+    playerNameInput.focus();
+  }
+
+  function openSkinUnlock(returnTo = "menu", showUnlock = false, featuredSkin = currentSkin) {
+    skinModalReturn = returnTo;
+    const featured = showUnlock ? featuredSkin : currentSkin;
+    const details = SKIN_DETAILS[featured];
+    skinBadge.textContent = showUnlock ? "SKIN DESBLOQUEADA" : "VESTIÁRIO";
+    skinTitle.innerHTML = showUnlock
+      ? `VOCÊ ACHOU<br />O ${details.name}`
+      : "ESCOLHA SUA<br />SKIN";
+    skinShowcaseImage.src = details.asset;
+    skinShowcaseImage.alt = `Skin do ${details.name}`;
+    skinShowcaseEcho.style.backgroundImage = `url("${details.asset}")`;
+    updateSkinUI();
+    skinUnlockModal.classList.add("is-open");
+    skinUnlockModal.setAttribute("aria-hidden", "false");
+  }
+
+  function chooseSkin(skin) {
+    if (skin === "nanzao" && !nanzaoUnlocked) return;
+    if (skin === "pizzaGuido" && !pizzaGuidoUnlocked) return;
+    currentSkin = skin;
+    localStorage.setItem(SKIN_KEY, skin);
+    updateSkinUI();
+    skinUnlockModal.classList.remove("is-open");
+    skinUnlockModal.setAttribute("aria-hidden", "true");
+    blip(skin === "pizzaGuido" ? 1120 : skin === "nanzao" ? 980 : 420, 0.14, "square", 0.04);
+    draw();
+    if (skinModalReturn === "gameover") openGameOver();
+  }
+
   function crash() {
     if (state !== "running") return;
     state = "gameover";
@@ -423,9 +659,10 @@
     flash.classList.add("is-flashing");
     blip(115, 0.35, "sawtooth", 0.07);
     window.setTimeout(() => {
-      modal.classList.add("is-open");
-      modal.setAttribute("aria-hidden", "false");
-      playerNameInput.focus();
+      if (unlockedSkinThisRun) {
+        openSkinUnlock("gameover", true, unlockedSkinThisRun);
+      }
+      else openGameOver();
     }, 520);
   }
 
@@ -436,7 +673,13 @@
     }
 
     runTime += dt;
-    speed = Math.min(560, 310 + runTime * 4.1);
+    const nextSpeedLevel = Math.floor(score / SPEED_STEP_POINTS);
+    if (nextSpeedLevel > speedLevel) {
+      speedLevel = nextSpeedLevel;
+      emitDust(player.x + 45, groundY - 45, 16, "#31d7ff");
+      blip(760 + speedLevel * 35, 0.12, "square", 0.04);
+    }
+    speed = Math.min(MAX_SPEED, 310 + speedLevel * SPEED_STEP_AMOUNT);
     groundOffset = (groundOffset + speed * dt) % 46;
     score += dt * (9 + speed / 72);
     scoreElement.textContent = padScore(score);
@@ -446,6 +689,15 @@
 
     const hitbox = playerRect();
     const collided = obstacles.some((obstacle) => {
+      if (obstacle.type === "pineapple") {
+        if (intersects(hitbox, obstacleRect(obstacle))) collectPineapple(obstacle);
+        return false;
+      }
+      if (obstacle.type === "pizzaCollectible") {
+        if (intersects(hitbox, obstacleRect(obstacle))) collectPizza(obstacle);
+        return false;
+      }
+
       const frogClearedWhileDucking =
         obstacle.type === "frog" &&
         obstacle.triggered &&
@@ -497,6 +749,12 @@
 
   function drawPlayer() {
     const size = playerDimensions();
+    const activePlayerImage =
+      currentSkin === "pizzaGuido" && pizzaGuidoUnlocked
+        ? images.pizzaGuido
+        : currentSkin === "nanzao" && nanzaoUnlocked
+          ? images.nanzao
+          : images.torto;
     const top = groundY + player.jumpY - size.height;
     const stride = player.airborne ? 0 : Math.sin(player.runPhase) * 2.8;
     const duckShear = controls.duck && !player.airborne ? -0.24 : 0;
@@ -511,9 +769,9 @@
       ctx.globalAlpha = 0.24;
       ctx.globalCompositeOperation = "screen";
       ctx.filter = "hue-rotate(110deg) saturate(2)";
-      drawImageSafe(images.torto, -size.width / 2 - 13, -size.height / 2 + 6, size.width, size.height);
+      drawImageSafe(activePlayerImage, -size.width / 2 - 13, -size.height / 2 + 6, size.width, size.height);
       ctx.filter = "hue-rotate(280deg) saturate(2)";
-      drawImageSafe(images.torto, -size.width / 2 + 12, -size.height / 2 - 4, size.width, size.height);
+      drawImageSafe(activePlayerImage, -size.width / 2 + 12, -size.height / 2 - 4, size.width, size.height);
       ctx.filter = "none";
       ctx.globalCompositeOperation = "source-over";
       ctx.globalAlpha = 1;
@@ -521,13 +779,32 @@
 
     ctx.shadowColor = "#ff2da8";
     ctx.shadowBlur = 11;
-    drawImageSafe(images.torto, -size.width / 2, -size.height / 2 + stride, size.width, size.height);
+    drawImageSafe(activePlayerImage, -size.width / 2, -size.height / 2 + stride, size.width, size.height);
     ctx.restore();
   }
 
   function drawObstacle(obstacle) {
     ctx.save();
-    if (obstacle.type === "cup") {
+    if (obstacle.type === "pineapple" || obstacle.type === "pizzaCollectible") {
+      const bob = Math.sin(obstacle.phase * 0.8) * 7;
+      const collectibleImage =
+        obstacle.type === "pizzaCollectible" ? images.pizzaCollectible : images.pineapple;
+      ctx.translate(obstacle.x + obstacle.width / 2, obstacle.y + obstacle.height / 2 + bob);
+      ctx.rotate(
+        obstacle.type === "pizzaCollectible"
+          ? Math.sin(obstacle.phase * 0.48) * 0.18
+          : Math.sin(obstacle.phase * 0.55) * 0.11,
+      );
+      ctx.shadowColor = obstacle.type === "pizzaCollectible" ? "#ff9f1c" : "#dfff00";
+      ctx.shadowBlur = 18;
+      drawImageSafe(
+        collectibleImage,
+        -obstacle.width / 2,
+        -obstacle.height / 2,
+        obstacle.width,
+        obstacle.height,
+      );
+    } else if (obstacle.type === "cup") {
       const wobble = Math.sin(obstacle.phase) * 0.025;
       ctx.translate(obstacle.x + obstacle.width / 2, groundY);
       ctx.rotate(wobble);
@@ -783,6 +1060,19 @@
   ["pointerup", "pointercancel", "lostpointercapture"].forEach((eventName) => {
     duckButton.addEventListener(eventName, () => setDuck(false));
   });
+  [jumpButton, duckButton].forEach((button) => {
+    button.addEventListener("contextmenu", (event) => event.preventDefault());
+    button.addEventListener("selectstart", (event) => event.preventDefault());
+  });
+  becomeNanzaoButton.addEventListener("click", () => chooseSkin("nanzao"));
+  becomePizzaGuidoButton.addEventListener("click", () => chooseSkin("pizzaGuido"));
+  stayTortoButton.addEventListener("click", () => chooseSkin("torto"));
+  skinSwitchButton.addEventListener("click", () => openSkinUnlock("menu", false));
+  gameOverSkinButton.addEventListener("click", () => {
+    modal.classList.remove("is-open");
+    modal.setAttribute("aria-hidden", "true");
+    openSkinUnlock("gameover", false);
+  });
   soundButton.addEventListener("click", () => {
     soundEnabled = !soundEnabled;
     soundButton.textContent = soundEnabled ? "SOM ON" : "SOM OFF";
@@ -799,6 +1089,7 @@
 
   bestScoreElement.textContent = padScore(bestScore);
   playerNameInput.value = localStorage.getItem(NAME_KEY) || "";
+  updateSkinUI();
   resizeCanvas();
   loadAssets().then(draw);
   loadRanking();

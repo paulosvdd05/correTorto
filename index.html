@@ -16,7 +16,7 @@
     <link rel="icon" href="public/gin-cup.png" />
     <link rel="preload" as="image" href="public/city-bg.png" />
     <link rel="preload" as="image" href="public/torto.png" />
-    <link rel="stylesheet" href="styles.css" />
+    <link rel="stylesheet" href="styles.css?v=5" />
   </head>
   <body>
     <div class="noise" aria-hidden="true"></div>
@@ -53,6 +53,14 @@
 
         <canvas id="gameCanvas" aria-label="Área do jogo"></canvas>
 
+        <div class="achievement-toast" id="achievementToast" role="status" aria-live="polite">
+          <img id="achievementIcon" src="public/pineapple.png" alt="" />
+          <div>
+            <span>CONQUISTA DESBLOQUEADA</span>
+            <strong id="achievementTitle">VOCÊ ACHOU O NANZÃO</strong>
+          </div>
+        </div>
+
         <div class="start-screen" id="startScreen">
           <div class="stamp">PRONTO?</div>
           <h2>O CORRE COMEÇOU</h2>
@@ -61,6 +69,9 @@
             <b>Abaixe</b> do beck e do sapo.
           </p>
           <button class="primary-button" id="startButton" type="button">COMEÇAR O CORRE</button>
+          <button class="skin-switch-button" id="skinSwitchButton" type="button" hidden>
+            ↻ TROCAR SKIN
+          </button>
           <small>ESPAÇO / ↑ pula · ↓ abaixa</small>
         </div>
 
@@ -117,9 +128,38 @@
         </form>
 
         <button class="restart-button" id="restartButton" type="button">↻ TENTAR DE NOVO</button>
+        <button class="skin-switch-button skin-switch-button--gameover" id="gameOverSkinButton" type="button" hidden>
+          TROCAR SKIN
+        </button>
       </div>
     </div>
 
-    <script src="game.js"></script>
+    <div class="modal skin-modal" id="skinUnlockModal" aria-hidden="true">
+      <div class="modal-backdrop"></div>
+      <div class="modal-panel skin-panel" role="dialog" aria-modal="true" aria-labelledby="skinTitle">
+        <div class="unlock-rays" aria-hidden="true"></div>
+        <div class="crash-label" id="skinBadge">SKIN DESBLOQUEADA</div>
+        <h2 id="skinTitle">VOCÊ ACHOU<br />O NANZÃO</h2>
+        <div class="nanzao-showcase">
+          <span class="nanzao-echo" id="skinShowcaseEcho" aria-hidden="true"></span>
+          <img id="skinShowcaseImage" src="public/nanzao.png" alt="Skin do Nanzão" />
+        </div>
+        <p>Escolha quem vai continuar o corre.</p>
+        <button class="primary-button skin-option nanzao-button" id="becomeNanzaoButton" type="button" aria-pressed="false">
+          <img src="public/nanzao.png" alt="" />
+          <span>VIRAR NANZÃO</span>
+        </button>
+        <button class="skin-option torto-button" id="stayTortoButton" type="button" aria-pressed="false">
+          <img src="public/torto.png" alt="" />
+          <span>QUERO SER TORTO</span>
+        </button>
+        <button class="skin-option pizza-guido-button" id="becomePizzaGuidoButton" type="button" aria-pressed="false">
+          <img src="public/pizza-guido.png" alt="" />
+          <span>VIRAR PIZZAGUIDO</span>
+        </button>
+      </div>
+    </div>
+
+    <script src="game.js?v=6"></script>
   </body>
 </html>
