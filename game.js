@@ -231,13 +231,13 @@
     };
 
     if (type === "cup") {
-      base.height = clamp(height * (0.17 + Math.random() * 0.035), 73, 105);
+      base.height = clamp(height * (0.15 + Math.random() * 0.028), 64, 90);
       base.width = base.height * 0.71;
     } else if (type === "frog") {
       base.width = clamp(width * 0.22, 84, 126);
       base.height = base.width * 0.73;
     } else {
-      base.width = clamp(width * 0.3, 118, 174);
+      base.width = clamp(width * 0.275, 108, 158);
       base.height = base.width * 0.72;
       base.multiplier = 1.38;
     }
@@ -735,7 +735,16 @@
     }
   }
 
+  function isTextEntry(target) {
+    return (
+      target instanceof HTMLElement &&
+      (target.matches("input, textarea, select") || target.isContentEditable)
+    );
+  }
+
   function handleKeyDown(event) {
+    if (isTextEntry(event.target)) return;
+
     if (event.code === "Space" || event.code === "ArrowUp" || event.code === "KeyW") {
       event.preventDefault();
       if (!event.repeat) jump();
@@ -747,6 +756,8 @@
   }
 
   function handleKeyUp(event) {
+    if (isTextEntry(event.target)) return;
+
     if (event.code === "ArrowDown" || event.code === "KeyS") {
       event.preventDefault();
       setDuck(false);
