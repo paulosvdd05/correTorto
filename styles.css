@@ -366,6 +366,8 @@ button {
   box-shadow: 5px 5px 0 var(--ink);
   cursor: pointer;
   user-select: none;
+  touch-action: none;
+  -webkit-user-select: none;
 }
 
 .control-button span {
@@ -623,6 +625,35 @@ button {
     width: 440px;
     margin-right: auto;
     margin-left: auto;
+  }
+}
+
+@media (max-width: 700px), (hover: none) and (pointer: coarse) {
+  body.is-playing {
+    padding-bottom: calc(86px + env(safe-area-inset-bottom));
+  }
+
+  body.is-playing .controls {
+    position: fixed;
+    z-index: 45;
+    right: auto;
+    bottom: calc(7px + env(safe-area-inset-bottom));
+    left: 50%;
+    width: min(calc(100% - 20px), 736px);
+    margin: 0;
+    padding: 6px;
+    border: 3px solid var(--ink);
+    background: rgba(13, 6, 21, 0.88);
+    box-shadow:
+      5px 5px 0 var(--pink),
+      -3px -3px 0 var(--cyan);
+    backdrop-filter: blur(8px);
+    transform: translateX(-50%);
+  }
+
+  body.is-playing .control-button {
+    min-height: 62px;
+    font-size: 0.82rem;
   }
 }
 

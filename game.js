@@ -166,6 +166,7 @@
   function startGame() {
     initAudio();
     state = "running";
+    document.body.classList.add("is-playing");
     runTime = 0;
     score = 0;
     speed = 310;
@@ -288,7 +289,7 @@
       if (
         obstacle.type === "frog" &&
         !obstacle.triggered &&
-        obstacle.x - player.x < clamp(width * 0.58, 210, 330)
+        obstacle.x - player.x < clamp(width * 0.72, 260, 390)
       ) {
         obstacle.triggered = true;
         obstacle.jumpTime = 0;
@@ -312,6 +313,14 @@
     }
   }
 
+  function frogMotion(obstacle) {
+    const progress = clamp(obstacle.jumpTime / 1.55, 0, 1);
+    const lift = obstacle.triggered
+      ? Math.sin(progress * Math.PI) * clamp(height * 0.255, 105, 140)
+      : 0;
+    return { progress, lift };
+  }
+
   function obstacleRect(obstacle) {
     if (obstacle.type === "beck") {
       const bob = Math.sin(obstacle.phase) * 4;
@@ -324,8 +333,7 @@
     }
 
     if (obstacle.type === "frog") {
-      const progress = clamp(obstacle.jumpTime / 1.3, 0, 1);
-      const lift = obstacle.triggered ? Math.sin(progress * Math.PI) * clamp(height * 0.18, 74, 98) : 0;
+      const { lift } = frogMotion(obstacle);
       const y = groundY - obstacle.height - lift;
       return {
         x: obstacle.x + obstacle.width * 0.12,
@@ -400,6 +408,7 @@
   function crash() {
     if (state !== "running") return;
     state = "gameover";
+    document.body.classList.remove("is-playing");
     controls.duck = false;
     duckButton.classList.remove("is-pressed");
     screenShake = reducedMotion ? 0 : 10;
@@ -436,7 +445,18 @@
     updateParticles(dt);
 
     const hitbox = playerRect();
-    if (obstacles.some((obstacle) => intersects(hitbox, obstacleRect(obstacle)))) {
+    const collided = obstacles.some((obstacle) => {
+      const frogClearedWhileDucking =
+        obstacle.type === "frog" &&
+        obstacle.triggered &&
+        controls.duck &&
+        !player.airborne;
+
+      if (frogClearedWhileDucking) return false;
+      return intersects(hitbox, obstacleRect(obstacle));
+    });
+
+    if (collided) {
       crash();
     }
   }
@@ -521,8 +541,7 @@
         obstacle.height,
       );
     } else if (obstacle.type === "frog") {
-      const progress = clamp(obstacle.jumpTime / 1.3, 0, 1);
-      const lift = obstacle.triggered ? Math.sin(progress * Math.PI) * clamp(height * 0.18, 74, 98) : 0;
+      const { progress, lift } = frogMotion(obstacle);
       const squash = obstacle.triggered ? 1 + Math.sin(progress * Math.PI) * 0.12 : 1;
       ctx.translate(obstacle.x + obstacle.width / 2, groundY - lift);
       ctx.scale(1 / squash, squash);
