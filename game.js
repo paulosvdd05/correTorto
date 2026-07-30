@@ -3,6 +3,7 @@
 
   const canvas = document.querySelector("#gameCanvas");
   const ctx = canvas.getContext("2d");
+  const gameCard = document.querySelector(".game-card");
   const startScreen = document.querySelector("#startScreen");
   const startButton = document.querySelector("#startButton");
   const jumpButton = document.querySelector("#jumpButton");
@@ -25,6 +26,7 @@
   const achievementToast = document.querySelector("#achievementToast");
   const achievementIcon = document.querySelector("#achievementIcon");
   const achievementTitle = document.querySelector("#achievementTitle");
+  const powerMessage = document.querySelector("#powerMessage");
   const skinUnlockModal = document.querySelector("#skinUnlockModal");
   const skinSwitchButton = document.querySelector("#skinSwitchButton");
   const gameOverSkinButton = document.querySelector("#gameOverSkinButton");
@@ -42,6 +44,7 @@
     pizzaGuido: "public/pizza-guido.png",
     pineapple: "public/pineapple.png",
     pizzaCollectible: "public/pizza-collectible.png",
+    energyCan: "public/energy-can.png",
     cup: "public/gin-cup.png",
     frog: "public/frog.png",
     elephant: "public/elephant.png",
@@ -75,8 +78,8 @@
   const NANZAO_UNLOCKED_KEY = "pulaTortoNanzaoUnlocked";
   const PIZZA_GUIDO_UNLOCKED_KEY = "pulaTortoPizzaGuidoUnlocked";
   const SKIN_KEY = "pulaTortoSelectedSkin";
-  const NANZAO_SCORE = 1234;
-  const PIZZA_GUIDO_SCORE = 2500;
+  const NANZAO_SCORE = 1000;
+  const PIZZA_GUIDO_SCORE = 1500;
   const SPEED_STEP_POINTS = 400;
   const SPEED_STEP_AMOUNT = 36;
   const MAX_SPEED = 598;
@@ -106,7 +109,10 @@
   let pineappleRetryAt = 0;
   let pizzaSpawned = false;
   let pizzaRetryAt = 0;
+  let energyCanSpawned = false;
+  let invincibleTime = 0;
   let achievementTimer = 0;
+  let powerMessageTimer = 0;
   let unlockedSkinThisRun = null;
   let skinModalReturn = "menu";
   let nanzaoUnlocked = localStorage.getItem(NANZAO_UNLOCKED_KEY) === "1";
@@ -239,6 +245,8 @@
     pineappleRetryAt = 0;
     pizzaSpawned = false;
     pizzaRetryAt = 0;
+    energyCanSpawned = false;
+    invincibleTime = 0;
     unlockedSkinThisRun = null;
     obstacles.length = 0;
     particles.length = 0;
@@ -253,9 +261,13 @@
     skinUnlockModal.classList.remove("is-open");
     skinUnlockModal.setAttribute("aria-hidden", "true");
     achievementToast.classList.remove("is-visible");
+    powerMessage.classList.remove("is-visible");
+    gameCard.classList.remove("is-invincible");
     window.clearTimeout(achievementTimer);
+    window.clearTimeout(powerMessageTimer);
     scoreElement.textContent = "00000";
     formMessage.textContent = "";
+    if (currentSkin === "nanzao" && nanzaoUnlocked) spawnEnergyCan();
     lastTime = performance.now();
     blip(540, 0.12);
     cancelAnimationFrame(animationId);
@@ -328,6 +340,22 @@
       phase: 0,
     });
     beckTimer = 13 + Math.random() * 9;
+  }
+
+  function spawnEnergyCan() {
+    const canHeight = clamp(height * 0.16, 64, 88);
+    obstacles.push({
+      type: "energyCan",
+      x: width + 24,
+      y: groundY - canHeight - 12,
+      width: canHeight * 0.49,
+      height: canHeight,
+      multiplier: 1.25,
+      passed: true,
+      phase: 0,
+      collected: false,
+    });
+    energyCanSpawned = true;
   }
 
   function spawnPineapple() {
@@ -423,6 +451,28 @@
     blip(1320, 0.24, "square", 0.06);
   }
 
+  function showPowerMessage() {
+    powerMessage.classList.remove("is-visible");
+    void powerMessage.offsetWidth;
+    powerMessage.classList.add("is-visible");
+    window.clearTimeout(powerMessageTimer);
+    powerMessageTimer = window.setTimeout(() => {
+      powerMessage.classList.remove("is-visible");
+    }, 2200);
+  }
+
+  function collectEnergyCan(obstacle) {
+    if (obstacle.collected) return;
+    obstacle.collected = true;
+    obstacle.x = -500;
+    invincibleTime = 5;
+    gameCard.classList.add("is-invincible");
+    emitDust(player.x + 44, groundY - 85, 42, "#31d7ff");
+    emitDust(player.x + 44, groundY - 85, 28, "#dfff00");
+    showPowerMessage();
+    blip(1480, 0.28, "sawtooth", 0.065);
+  }
+
   function updateObstacles(dt) {
     spawnTimer -= dt;
     beckTimer -= dt;
@@ -513,7 +563,11 @@
   }
 
   function obstacleRect(obstacle) {
-    if (obstacle.type === "pineapple" || obstacle.type === "pizzaCollectible") {
+    if (
+      obstacle.type === "pineapple" ||
+      obstacle.type === "pizzaCollectible" ||
+      obstacle.type === "energyCan"
+    ) {
       const bob = Math.sin(obstacle.phase * 0.8) * 7;
       return {
         x: obstacle.x + obstacle.width * 0.16,
@@ -645,6 +699,7 @@
     if (state !== "running") return;
     state = "gameover";
     document.body.classList.remove("is-playing");
+    gameCard.classList.remove("is-invincible");
     controls.duck = false;
     duckButton.classList.remove("is-pressed");
     screenShake = reducedMotion ? 0 : 10;
@@ -673,6 +728,13 @@
     }
 
     runTime += dt;
+    if (invincibleTime > 0) {
+      invincibleTime = Math.max(0, invincibleTime - dt);
+      if (invincibleTime === 0) {
+        gameCard.classList.remove("is-invincible");
+        blip(190, 0.12, "triangle", 0.03);
+      }
+    }
     const nextSpeedLevel = Math.floor(score / SPEED_STEP_POINTS);
     if (nextSpeedLevel > speedLevel) {
       speedLevel = nextSpeedLevel;
@@ -695,6 +757,18 @@
       }
       if (obstacle.type === "pizzaCollectible") {
         if (intersects(hitbox, obstacleRect(obstacle))) collectPizza(obstacle);
+        return false;
+      }
+      if (obstacle.type === "energyCan") {
+        if (intersects(hitbox, obstacleRect(obstacle))) collectEnergyCan(obstacle);
+        return false;
+      }
+
+      if (invincibleTime > 0 && intersects(hitbox, obstacleRect(obstacle))) {
+        obstacle.x = -500;
+        score += 10;
+        emitDust(hitbox.x + hitbox.width, hitbox.y + hitbox.height / 2, 14, "#31d7ff");
+        blip(1080, 0.06, "square", 0.02);
         return false;
       }
 
@@ -777,25 +851,48 @@
       ctx.globalAlpha = 1;
     }
 
-    ctx.shadowColor = "#ff2da8";
-    ctx.shadowBlur = 11;
+    if (invincibleTime > 0) {
+      ctx.globalAlpha = 0.18 + (Math.sin(runTime * 28) + 1) * 0.12;
+      ctx.globalCompositeOperation = "screen";
+      ctx.filter = "hue-rotate(145deg) saturate(2.4) brightness(1.35)";
+      ctx.shadowColor = "#dfff00";
+      ctx.shadowBlur = 24;
+    } else {
+      ctx.shadowColor = "#ff2da8";
+      ctx.shadowBlur = 11;
+    }
     drawImageSafe(activePlayerImage, -size.width / 2, -size.height / 2 + stride, size.width, size.height);
     ctx.restore();
   }
 
   function drawObstacle(obstacle) {
     ctx.save();
-    if (obstacle.type === "pineapple" || obstacle.type === "pizzaCollectible") {
+    if (
+      obstacle.type === "pineapple" ||
+      obstacle.type === "pizzaCollectible" ||
+      obstacle.type === "energyCan"
+    ) {
       const bob = Math.sin(obstacle.phase * 0.8) * 7;
       const collectibleImage =
-        obstacle.type === "pizzaCollectible" ? images.pizzaCollectible : images.pineapple;
+        obstacle.type === "pizzaCollectible"
+          ? images.pizzaCollectible
+          : obstacle.type === "energyCan"
+            ? images.energyCan
+            : images.pineapple;
       ctx.translate(obstacle.x + obstacle.width / 2, obstacle.y + obstacle.height / 2 + bob);
       ctx.rotate(
         obstacle.type === "pizzaCollectible"
           ? Math.sin(obstacle.phase * 0.48) * 0.18
-          : Math.sin(obstacle.phase * 0.55) * 0.11,
+          : obstacle.type === "energyCan"
+            ? Math.sin(obstacle.phase * 0.65) * 0.08
+            : Math.sin(obstacle.phase * 0.55) * 0.11,
       );
-      ctx.shadowColor = obstacle.type === "pizzaCollectible" ? "#ff9f1c" : "#dfff00";
+      ctx.shadowColor =
+        obstacle.type === "pizzaCollectible"
+          ? "#ff9f1c"
+          : obstacle.type === "energyCan"
+            ? "#31d7ff"
+            : "#dfff00";
       ctx.shadowBlur = 18;
       drawImageSafe(
         collectibleImage,

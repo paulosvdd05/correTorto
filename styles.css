@@ -140,6 +140,10 @@ button {
     -5px -5px 0 var(--cyan);
 }
 
+.game-card.is-invincible {
+  animation: invincible-frame 260ms steps(2) infinite;
+}
+
 .game-card::before {
   content: "";
   position: absolute;
@@ -416,6 +420,29 @@ button {
 .achievement-toast strong {
   font: 900 1.08rem/0.95 Impact, "Arial Black", sans-serif;
   letter-spacing: 0.035em;
+}
+
+.power-message {
+  position: absolute;
+  z-index: 16;
+  top: 42%;
+  left: 50%;
+  width: 95%;
+  color: var(--paper);
+  font: 900 clamp(2.7rem, 13vw, 6rem)/0.82 Impact, "Arial Black", sans-serif;
+  letter-spacing: -0.025em;
+  text-align: center;
+  text-shadow:
+    5px 5px 0 var(--pink),
+    -4px -3px 0 var(--cyan),
+    9px 9px 0 var(--ink);
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(-50%, -50%) scale(0.3) rotate(-8deg);
+}
+
+.power-message.is-visible {
+  animation: power-message 2.1s cubic-bezier(0.2, 0.85, 0.25, 1) both;
 }
 
 .controls {
@@ -917,6 +944,47 @@ button {
   100% {
     opacity: 0;
     transform: translate(-50%, -160%) scale(0.94);
+  }
+}
+
+@keyframes power-message {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.25) rotate(-12deg);
+  }
+  12% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1.18) rotate(2deg);
+  }
+  22%,
+  74% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1) rotate(-2deg);
+  }
+  80% {
+    transform: translate(-48%, -50%) scale(1.05) skewX(-8deg);
+  }
+  86% {
+    transform: translate(-52%, -50%) scale(1.05) skewX(8deg);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(1.45) rotate(3deg);
+  }
+}
+
+@keyframes invincible-frame {
+  0% {
+    box-shadow:
+      9px 9px 0 var(--cyan),
+      -7px -7px 0 var(--acid);
+    filter: saturate(1.25) hue-rotate(0deg);
+  }
+  100% {
+    box-shadow:
+      9px 9px 0 var(--pink),
+      -7px -7px 0 var(--cyan);
+    filter: saturate(1.65) hue-rotate(35deg);
   }
 }
 
