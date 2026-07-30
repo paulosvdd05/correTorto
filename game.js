@@ -40,6 +40,8 @@
   const pizzaGuidoLabel = document.querySelector("#pizzaGuidoLabel");
   const becomeReiTortoButton = document.querySelector("#becomeReiTortoButton");
   const reiTortoLabel = document.querySelector("#reiTortoLabel");
+  const becomeChinesButton = document.querySelector("#becomeChinesButton");
+  const chinesLabel = document.querySelector("#chinesLabel");
   const secretTortoTrigger = document.querySelector("#secretTortoTrigger");
 
   const ASSET_PATHS = {
@@ -47,9 +49,11 @@
     nanzao: "public/nanzao.png",
     pizzaGuido: "public/pizza-guido.png",
     reiTorto: "public/rei-torto.png",
+    chines: "public/chines.png",
     pineapple: "public/pineapple.png",
     pizzaCollectible: "public/pizza-collectible.png",
     energyCan: "public/energy-can.png",
+    ketchup: "public/ketchup.png",
     cup: "public/gin-cup.png",
     frog: "public/frog.png",
     elephant: "public/elephant.png",
@@ -76,6 +80,11 @@
       asset: "public/rei-torto.png",
       collectible: "public/rei-torto.png",
     },
+    chines: {
+      name: "CHINÊS",
+      asset: "public/chines.png",
+      collectible: "public/ketchup.png",
+    },
   };
 
   const images = {};
@@ -88,9 +97,11 @@
   const NANZAO_UNLOCKED_KEY = "pulaTortoNanzaoUnlocked";
   const PIZZA_GUIDO_UNLOCKED_KEY = "pulaTortoPizzaGuidoUnlocked";
   const REI_TORTO_UNLOCKED_KEY = "pulaTortoReiTortoUnlocked";
+  const CHINES_UNLOCKED_KEY = "pulaTortoChinesUnlocked";
   const SKIN_KEY = "pulaTortoSelectedSkin";
   const NANZAO_SCORE = 1234;
   const PIZZA_GUIDO_SCORE = 2500;
+  const CHINES_SCORE = 3000;
   const SPEED_STEP_POINTS = 400;
   const SPEED_STEP_AMOUNT = 36;
   const MAX_SPEED = 598;
@@ -121,6 +132,8 @@
   let pizzaSpawned = false;
   let pizzaRetryAt = 0;
   let energyCanSpawned = false;
+  let ketchupSpawned = false;
+  let ketchupRetryAt = 0;
   let invincibleTime = 0;
   let achievementTimer = 0;
   let powerMessageTimer = 0;
@@ -130,11 +143,13 @@
   let nanzaoUnlocked = localStorage.getItem(NANZAO_UNLOCKED_KEY) === "1";
   let pizzaGuidoUnlocked = localStorage.getItem(PIZZA_GUIDO_UNLOCKED_KEY) === "1";
   let reiTortoUnlocked = localStorage.getItem(REI_TORTO_UNLOCKED_KEY) === "1";
+  let chinesUnlocked = localStorage.getItem(CHINES_UNLOCKED_KEY) === "1";
   const savedSkin = localStorage.getItem(SKIN_KEY);
   let currentSkin =
     (savedSkin === "nanzao" && nanzaoUnlocked) ||
     (savedSkin === "pizzaGuido" && pizzaGuidoUnlocked) ||
-    (savedSkin === "reiTorto" && reiTortoUnlocked)
+    (savedSkin === "reiTorto" && reiTortoUnlocked) ||
+    (savedSkin === "chines" && chinesUnlocked)
       ? savedSkin
       : "torto";
 
@@ -195,6 +210,8 @@
           ? 0.63
           : currentSkin === "reiTorto"
             ? 0.47
+            : currentSkin === "chines"
+              ? 0.56
             : 0.39;
     const standingWidth = standingHeight * skinRatio;
     const ducking = controls.duck && !player.airborne;
@@ -267,6 +284,8 @@
     pizzaSpawned = false;
     pizzaRetryAt = 0;
     energyCanSpawned = false;
+    ketchupSpawned = false;
+    ketchupRetryAt = 0;
     invincibleTime = 0;
     unlockedSkinThisRun = null;
     obstacles.length = 0;
@@ -291,6 +310,7 @@
     formMessage.textContent = "";
     if (currentSkin === "nanzao" && nanzaoUnlocked) spawnEnergyCan();
     if (currentSkin === "pizzaGuido" && pizzaGuidoUnlocked) spawnPizzaPower();
+    if (currentSkin === "chines" && chinesUnlocked) spawnKetchupPower();
     lastTime = performance.now();
     blip(540, 0.12);
     cancelAnimationFrame(animationId);
@@ -408,6 +428,21 @@
     });
   }
 
+  function spawnKetchupPower() {
+    const ketchupHeight = clamp(height * 0.17, 70, 94);
+    obstacles.push({
+      type: "ketchupPower",
+      x: width + 24,
+      y: groundY - ketchupHeight - 12,
+      width: ketchupHeight * 0.42,
+      height: ketchupHeight,
+      multiplier: 1.25,
+      passed: true,
+      phase: Math.PI / 3,
+      collected: false,
+    });
+  }
+
   function spawnPineapple() {
     const itemWidth = clamp(width * 0.12, 44, 66);
     obstacles.push({
@@ -440,6 +475,22 @@
     pizzaSpawned = true;
   }
 
+  function spawnKetchup() {
+    const ketchupHeight = clamp(height * 0.18, 72, 98);
+    obstacles.push({
+      type: "ketchupCollectible",
+      x: width + 82,
+      y: groundY - clamp(height * 0.25, 112, 148),
+      width: ketchupHeight * 0.42,
+      height: ketchupHeight,
+      multiplier: 0.95,
+      passed: true,
+      phase: Math.PI / 3,
+      collected: false,
+    });
+    ketchupSpawned = true;
+  }
+
   function showAchievement(skin) {
     const details = SKIN_DETAILS[skin];
     achievementIcon.src = details.collectible;
@@ -459,26 +510,32 @@
     const nanzaoSelected = currentSkin === "nanzao";
     const pizzaSelected = currentSkin === "pizzaGuido";
     const reiTortoSelected = currentSkin === "reiTorto";
+    const chinesSelected = currentSkin === "chines";
     const tortoSelected = currentSkin === "torto";
     becomeNanzaoButton.disabled = !nanzaoUnlocked;
     becomePizzaGuidoButton.disabled = !pizzaGuidoUnlocked;
     becomeReiTortoButton.disabled = !reiTortoUnlocked;
+    becomeChinesButton.disabled = !chinesUnlocked;
     pizzaGuidoLabel.textContent = pizzaGuidoUnlocked
       ? "VIRAR PIZZAGUIDO"
       : "PERSONAGEM SECRETO";
     reiTortoLabel.textContent = reiTortoUnlocked
       ? "VIRAR REI TORTO"
       : "PERSONAGEM SECRETO";
+    chinesLabel.textContent = chinesUnlocked ? "VIRAR CHINÊS" : "PERSONAGEM SECRETO";
     becomeNanzaoButton.classList.toggle("is-locked", !nanzaoUnlocked);
     becomePizzaGuidoButton.classList.toggle("is-locked", !pizzaGuidoUnlocked);
     becomeReiTortoButton.classList.toggle("is-locked", !reiTortoUnlocked);
+    becomeChinesButton.classList.toggle("is-locked", !chinesUnlocked);
     becomeNanzaoButton.classList.toggle("is-selected", nanzaoSelected);
     becomePizzaGuidoButton.classList.toggle("is-selected", pizzaSelected);
     becomeReiTortoButton.classList.toggle("is-selected", reiTortoSelected);
+    becomeChinesButton.classList.toggle("is-selected", chinesSelected);
     stayTortoButton.classList.toggle("is-selected", tortoSelected);
     becomeNanzaoButton.setAttribute("aria-pressed", String(nanzaoSelected));
     becomePizzaGuidoButton.setAttribute("aria-pressed", String(pizzaSelected));
     becomeReiTortoButton.setAttribute("aria-pressed", String(reiTortoSelected));
+    becomeChinesButton.setAttribute("aria-pressed", String(chinesSelected));
     stayTortoButton.setAttribute("aria-pressed", String(tortoSelected));
     secretTortoTrigger.classList.toggle("is-unlocked", reiTortoUnlocked);
   }
@@ -540,9 +597,25 @@
     blip(1320, 0.24, "square", 0.06);
   }
 
+  function collectKetchup(obstacle) {
+    if (obstacle.collected) return;
+    obstacle.collected = true;
+    obstacle.x = -500;
+    chinesUnlocked = true;
+    unlockedSkinThisRun = "chines";
+    localStorage.setItem(CHINES_UNLOCKED_KEY, "1");
+    updateSkinUI();
+    score += 200;
+    emitDust(player.x + 42, groundY - 110, 42, "#c8272f");
+    emitDust(player.x + 42, groundY - 110, 28, "#ff9f1c");
+    showAchievement("chines");
+    blip(1440, 0.26, "square", 0.065);
+  }
+
   function showPowerMessage(message, pizzaStyle = false) {
     powerMessage.classList.remove("is-visible");
     powerMessage.classList.toggle("is-pizza", pizzaStyle);
+    powerMessage.classList.toggle("is-long", message.length > 22);
     powerMessage.textContent = message;
     void powerMessage.offsetWidth;
     powerMessage.classList.add("is-visible");
@@ -574,6 +647,18 @@
     emitDust(player.x + 44, groundY - 85, 30, "#ff2da8");
     showPowerMessage("ARMA R$200 AIKKKKKKKK", true);
     blip(1620, 0.34, "sawtooth", 0.07);
+  }
+
+  function collectKetchupPower(obstacle) {
+    if (obstacle.collected) return;
+    obstacle.collected = true;
+    obstacle.x = -500;
+    invincibleTime = 10;
+    gameCard.classList.add("is-invincible");
+    emitDust(player.x + 44, groundY - 85, 52, "#c8272f");
+    emitDust(player.x + 44, groundY - 85, 34, "#ff9f1c");
+    showPowerMessage("AQUI EM CASA È MOIADO ZE", true);
+    blip(1760, 0.38, "sawtooth", 0.075);
   }
 
   function updateObstacles(dt) {
@@ -618,6 +703,16 @@
       spawnPizza();
     }
 
+    if (
+      !chinesUnlocked &&
+      !ketchupSpawned &&
+      score >= CHINES_SCORE &&
+      runTime >= ketchupRetryAt &&
+      !obstacles.some((obstacle) => obstacle.x > width * 0.5)
+    ) {
+      spawnKetchup();
+    }
+
     obstacles.forEach((obstacle) => {
       obstacle.x -= speed * obstacle.multiplier * dt;
       obstacle.phase += dt * 7;
@@ -654,6 +749,10 @@
         pizzaSpawned = false;
         pizzaRetryAt = runTime + 7;
       }
+      if (expired.type === "ketchupCollectible" && !expired.collected) {
+        ketchupSpawned = false;
+        ketchupRetryAt = runTime + 7;
+      }
     }
   }
 
@@ -670,7 +769,9 @@
       obstacle.type === "pineapple" ||
       obstacle.type === "pizzaCollectible" ||
       obstacle.type === "energyCan" ||
-      obstacle.type === "pizzaPower"
+      obstacle.type === "pizzaPower" ||
+      obstacle.type === "ketchupCollectible" ||
+      obstacle.type === "ketchupPower"
     ) {
       const bob = Math.sin(obstacle.phase * 0.8) * 7;
       return {
@@ -791,6 +892,7 @@
     if (skin === "nanzao" && !nanzaoUnlocked) return;
     if (skin === "pizzaGuido" && !pizzaGuidoUnlocked) return;
     if (skin === "reiTorto" && !reiTortoUnlocked) return;
+    if (skin === "chines" && !chinesUnlocked) return;
     currentSkin = skin;
     localStorage.setItem(SKIN_KEY, skin);
     updateSkinUI();
@@ -799,6 +901,8 @@
     blip(
       skin === "reiTorto"
         ? 1260
+        : skin === "chines"
+          ? 1360
         : skin === "pizzaGuido"
           ? 1120
           : skin === "nanzao"
@@ -884,6 +988,14 @@
         if (intersects(hitbox, obstacleRect(obstacle))) collectPizzaPower(obstacle);
         return false;
       }
+      if (obstacle.type === "ketchupCollectible") {
+        if (intersects(hitbox, obstacleRect(obstacle))) collectKetchup(obstacle);
+        return false;
+      }
+      if (obstacle.type === "ketchupPower") {
+        if (intersects(hitbox, obstacleRect(obstacle))) collectKetchupPower(obstacle);
+        return false;
+      }
 
       if (invincibleTime > 0 && intersects(hitbox, obstacleRect(obstacle))) {
         obstacle.x = -500;
@@ -945,9 +1057,11 @@
   function drawPlayer() {
     const size = playerDimensions();
     const activePlayerImage =
-      currentSkin === "reiTorto" && reiTortoUnlocked
-        ? images.reiTorto
-        : currentSkin === "pizzaGuido" && pizzaGuidoUnlocked
+      currentSkin === "chines" && chinesUnlocked
+        ? images.chines
+        : currentSkin === "reiTorto" && reiTortoUnlocked
+          ? images.reiTorto
+          : currentSkin === "pizzaGuido" && pizzaGuidoUnlocked
           ? images.pizzaGuido
           : currentSkin === "nanzao" && nanzaoUnlocked
             ? images.nanzao
@@ -994,25 +1108,33 @@
       obstacle.type === "pineapple" ||
       obstacle.type === "pizzaCollectible" ||
       obstacle.type === "energyCan" ||
-      obstacle.type === "pizzaPower"
+      obstacle.type === "pizzaPower" ||
+      obstacle.type === "ketchupCollectible" ||
+      obstacle.type === "ketchupPower"
     ) {
       const bob = Math.sin(obstacle.phase * 0.8) * 7;
       const collectibleImage =
-        obstacle.type === "pizzaCollectible" || obstacle.type === "pizzaPower"
+        obstacle.type === "ketchupCollectible" || obstacle.type === "ketchupPower"
+          ? images.ketchup
+          : obstacle.type === "pizzaCollectible" || obstacle.type === "pizzaPower"
           ? images.pizzaCollectible
           : obstacle.type === "energyCan"
             ? images.energyCan
             : images.pineapple;
       ctx.translate(obstacle.x + obstacle.width / 2, obstacle.y + obstacle.height / 2 + bob);
       ctx.rotate(
-        obstacle.type === "pizzaCollectible" || obstacle.type === "pizzaPower"
+        obstacle.type === "ketchupCollectible" || obstacle.type === "ketchupPower"
+          ? Math.sin(obstacle.phase * 0.58) * 0.09
+          : obstacle.type === "pizzaCollectible" || obstacle.type === "pizzaPower"
           ? Math.sin(obstacle.phase * 0.48) * 0.18
           : obstacle.type === "energyCan"
             ? Math.sin(obstacle.phase * 0.65) * 0.08
             : Math.sin(obstacle.phase * 0.55) * 0.11,
       );
       ctx.shadowColor =
-        obstacle.type === "pizzaCollectible" || obstacle.type === "pizzaPower"
+        obstacle.type === "ketchupCollectible" || obstacle.type === "ketchupPower"
+          ? "#c8272f"
+          : obstacle.type === "pizzaCollectible" || obstacle.type === "pizzaPower"
           ? "#ff9f1c"
           : obstacle.type === "energyCan"
             ? "#31d7ff"
@@ -1288,6 +1410,7 @@
   becomeNanzaoButton.addEventListener("click", () => chooseSkin("nanzao"));
   becomePizzaGuidoButton.addEventListener("click", () => chooseSkin("pizzaGuido"));
   becomeReiTortoButton.addEventListener("click", () => chooseSkin("reiTorto"));
+  becomeChinesButton.addEventListener("click", () => chooseSkin("chines"));
   stayTortoButton.addEventListener("click", () => chooseSkin("torto"));
   secretTortoTrigger.addEventListener("click", clickSecretTorto);
   secretTortoTrigger.addEventListener("keydown", (event) => {

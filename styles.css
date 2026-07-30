@@ -470,6 +470,10 @@ button {
   letter-spacing: -0.04em;
 }
 
+.power-message.is-long {
+  font-size: clamp(1.15rem, 5.4vw, 3rem);
+}
+
 .controls {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -827,7 +831,8 @@ button {
 .nanzao-button,
 .torto-button,
 .pizza-guido-button,
-.rei-torto-button {
+.rei-torto-button,
+.chines-button {
   position: relative;
   z-index: 2;
   width: 100%;
@@ -938,13 +943,25 @@ button {
   cursor: pointer;
 }
 
+.chines-button {
+  margin-top: 10px;
+  border: var(--border);
+  color: var(--paper);
+  background: #a51f24;
+  box-shadow: 5px 5px 0 #ff9f1c;
+  font: 900 0.75rem/1 "Arial Black", Impact, sans-serif;
+  letter-spacing: 0.05em;
+  cursor: pointer;
+}
+
 .torto-button:active {
   transform: translate(3px, 3px);
   box-shadow: 2px 2px 0 var(--cyan);
 }
 
 .pizza-guido-button:active,
-.rei-torto-button:active {
+.rei-torto-button:active,
+.chines-button:active {
   transform: translate(3px, 3px);
   box-shadow: 2px 2px 0 var(--cyan);
 }
@@ -961,12 +978,17 @@ button {
   }
 
   .nanzao-showcase {
-    height: 150px;
-    min-height: 150px;
+    height: 110px;
+    min-height: 110px;
   }
 
   .skin-option {
-    min-height: 54px;
+    min-height: 49px;
+  }
+
+  .skin-option img {
+    width: 44px;
+    height: 44px;
   }
 }
 
