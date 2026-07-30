@@ -37,11 +37,16 @@
   const becomeNanzaoButton = document.querySelector("#becomeNanzaoButton");
   const stayTortoButton = document.querySelector("#stayTortoButton");
   const becomePizzaGuidoButton = document.querySelector("#becomePizzaGuidoButton");
+  const pizzaGuidoLabel = document.querySelector("#pizzaGuidoLabel");
+  const becomeReiTortoButton = document.querySelector("#becomeReiTortoButton");
+  const reiTortoLabel = document.querySelector("#reiTortoLabel");
+  const secretTortoTrigger = document.querySelector("#secretTortoTrigger");
 
   const ASSET_PATHS = {
     torto: "public/torto.png",
     nanzao: "public/nanzao.png",
     pizzaGuido: "public/pizza-guido.png",
+    reiTorto: "public/rei-torto.png",
     pineapple: "public/pineapple.png",
     pizzaCollectible: "public/pizza-collectible.png",
     energyCan: "public/energy-can.png",
@@ -66,6 +71,11 @@
       asset: "public/pizza-guido.png",
       collectible: "public/pizza-collectible.png",
     },
+    reiTorto: {
+      name: "REI TORTO",
+      asset: "public/rei-torto.png",
+      collectible: "public/rei-torto.png",
+    },
   };
 
   const images = {};
@@ -77,9 +87,10 @@
   const NAME_KEY = "pulaTortoName";
   const NANZAO_UNLOCKED_KEY = "pulaTortoNanzaoUnlocked";
   const PIZZA_GUIDO_UNLOCKED_KEY = "pulaTortoPizzaGuidoUnlocked";
+  const REI_TORTO_UNLOCKED_KEY = "pulaTortoReiTortoUnlocked";
   const SKIN_KEY = "pulaTortoSelectedSkin";
-  const NANZAO_SCORE = 1000;
-  const PIZZA_GUIDO_SCORE = 1500;
+  const NANZAO_SCORE = 1234;
+  const PIZZA_GUIDO_SCORE = 2500;
   const SPEED_STEP_POINTS = 400;
   const SPEED_STEP_AMOUNT = 36;
   const MAX_SPEED = 598;
@@ -115,12 +126,15 @@
   let powerMessageTimer = 0;
   let unlockedSkinThisRun = null;
   let skinModalReturn = "menu";
+  let secretTortoClicks = 0;
   let nanzaoUnlocked = localStorage.getItem(NANZAO_UNLOCKED_KEY) === "1";
   let pizzaGuidoUnlocked = localStorage.getItem(PIZZA_GUIDO_UNLOCKED_KEY) === "1";
+  let reiTortoUnlocked = localStorage.getItem(REI_TORTO_UNLOCKED_KEY) === "1";
   const savedSkin = localStorage.getItem(SKIN_KEY);
   let currentSkin =
     (savedSkin === "nanzao" && nanzaoUnlocked) ||
-    (savedSkin === "pizzaGuido" && pizzaGuidoUnlocked)
+    (savedSkin === "pizzaGuido" && pizzaGuidoUnlocked) ||
+    (savedSkin === "reiTorto" && reiTortoUnlocked)
       ? savedSkin
       : "torto";
 
@@ -131,6 +145,7 @@
     airborne: false,
     ducking: false,
     runPhase: 0,
+    jumpsUsed: 0,
   };
 
   function clamp(value, min, max) {
@@ -174,7 +189,13 @@
   function playerDimensions() {
     const standingHeight = clamp(height * 0.31, 126, 178);
     const skinRatio =
-      currentSkin === "nanzao" ? 0.66 : currentSkin === "pizzaGuido" ? 0.63 : 0.39;
+      currentSkin === "nanzao"
+        ? 0.66
+        : currentSkin === "pizzaGuido"
+          ? 0.63
+          : currentSkin === "reiTorto"
+            ? 0.47
+            : 0.39;
     const standingWidth = standingHeight * skinRatio;
     const ducking = controls.duck && !player.airborne;
     return ducking
@@ -253,6 +274,7 @@
     player.jumpY = 0;
     player.velocityY = 0;
     player.airborne = false;
+    player.jumpsUsed = 0;
     controls.duck = false;
     duckButton.classList.remove("is-pressed");
     startScreen.classList.add("is-hidden");
@@ -268,6 +290,7 @@
     scoreElement.textContent = "00000";
     formMessage.textContent = "";
     if (currentSkin === "nanzao" && nanzaoUnlocked) spawnEnergyCan();
+    if (currentSkin === "pizzaGuido" && pizzaGuidoUnlocked) spawnPizzaPower();
     lastTime = performance.now();
     blip(540, 0.12);
     cancelAnimationFrame(animationId);
@@ -279,11 +302,23 @@
       startGame();
       return;
     }
-    if (state !== "running" || player.airborne || controls.duck) return;
+    if (state !== "running" || controls.duck) return;
+    const doubleJump =
+      player.airborne &&
+      currentSkin === "reiTorto" &&
+      reiTortoUnlocked &&
+      player.jumpsUsed < 2;
+    if (player.airborne && !doubleJump) return;
     player.airborne = true;
-    player.velocityY = -clamp(height * 1.17, 510, 650);
+    player.velocityY = -clamp(height * 1.17, 510, 650) * (doubleJump ? 0.92 : 1);
+    player.jumpsUsed = doubleJump ? 2 : 1;
     emitDust(player.x + 24, groundY - 5, 9, "#31d7ff");
-    blip(680, 0.1, "square", 0.045);
+    if (doubleJump) {
+      emitDust(player.x + 34, groundY + player.jumpY - 22, 16, "#ffd45a");
+      blip(1040, 0.12, "square", 0.05);
+    } else {
+      blip(680, 0.1, "square", 0.045);
+    }
   }
 
   function setDuck(active) {
@@ -358,6 +393,21 @@
     energyCanSpawned = true;
   }
 
+  function spawnPizzaPower() {
+    const pizzaSize = clamp(width * 0.19, 68, 92);
+    obstacles.push({
+      type: "pizzaPower",
+      x: width + 24,
+      y: groundY - pizzaSize - 14,
+      width: pizzaSize,
+      height: pizzaSize,
+      multiplier: 1.25,
+      passed: true,
+      phase: Math.PI / 2,
+      collected: false,
+    });
+  }
+
   function spawnPineapple() {
     const itemWidth = clamp(width * 0.12, 44, 66);
     obstacles.push({
@@ -408,17 +458,56 @@
     gameOverSkinButton.hidden = false;
     const nanzaoSelected = currentSkin === "nanzao";
     const pizzaSelected = currentSkin === "pizzaGuido";
+    const reiTortoSelected = currentSkin === "reiTorto";
     const tortoSelected = currentSkin === "torto";
     becomeNanzaoButton.disabled = !nanzaoUnlocked;
     becomePizzaGuidoButton.disabled = !pizzaGuidoUnlocked;
+    becomeReiTortoButton.disabled = !reiTortoUnlocked;
+    pizzaGuidoLabel.textContent = pizzaGuidoUnlocked
+      ? "VIRAR PIZZAGUIDO"
+      : "PERSONAGEM SECRETO";
+    reiTortoLabel.textContent = reiTortoUnlocked
+      ? "VIRAR REI TORTO"
+      : "PERSONAGEM SECRETO";
     becomeNanzaoButton.classList.toggle("is-locked", !nanzaoUnlocked);
     becomePizzaGuidoButton.classList.toggle("is-locked", !pizzaGuidoUnlocked);
+    becomeReiTortoButton.classList.toggle("is-locked", !reiTortoUnlocked);
     becomeNanzaoButton.classList.toggle("is-selected", nanzaoSelected);
     becomePizzaGuidoButton.classList.toggle("is-selected", pizzaSelected);
+    becomeReiTortoButton.classList.toggle("is-selected", reiTortoSelected);
     stayTortoButton.classList.toggle("is-selected", tortoSelected);
     becomeNanzaoButton.setAttribute("aria-pressed", String(nanzaoSelected));
     becomePizzaGuidoButton.setAttribute("aria-pressed", String(pizzaSelected));
+    becomeReiTortoButton.setAttribute("aria-pressed", String(reiTortoSelected));
     stayTortoButton.setAttribute("aria-pressed", String(tortoSelected));
+    secretTortoTrigger.classList.toggle("is-unlocked", reiTortoUnlocked);
+  }
+
+  function clickSecretTorto() {
+    secretTortoTrigger.classList.remove("is-tapped");
+    void secretTortoTrigger.offsetWidth;
+    secretTortoTrigger.classList.add("is-tapped");
+    window.setTimeout(() => secretTortoTrigger.classList.remove("is-tapped"), 240);
+    if (reiTortoUnlocked) {
+      blip(780, 0.07, "square", 0.025);
+      return;
+    }
+
+    secretTortoClicks += 1;
+    blip(420 + secretTortoClicks * 90, 0.07, "square", 0.03);
+    if (secretTortoClicks < 6) return;
+
+    reiTortoUnlocked = true;
+    localStorage.setItem(REI_TORTO_UNLOCKED_KEY, "1");
+    updateSkinUI();
+    showAchievement("reiTorto");
+    emitDust(width * 0.5, 80, 44, "#ffd45a");
+    blip(1380, 0.32, "sawtooth", 0.07);
+    if (state === "running") {
+      unlockedSkinThisRun = "reiTorto";
+    } else {
+      openSkinUnlock("menu", true, "reiTorto");
+    }
   }
 
   function collectPineapple(obstacle) {
@@ -451,8 +540,10 @@
     blip(1320, 0.24, "square", 0.06);
   }
 
-  function showPowerMessage() {
+  function showPowerMessage(message, pizzaStyle = false) {
     powerMessage.classList.remove("is-visible");
+    powerMessage.classList.toggle("is-pizza", pizzaStyle);
+    powerMessage.textContent = message;
     void powerMessage.offsetWidth;
     powerMessage.classList.add("is-visible");
     window.clearTimeout(powerMessageTimer);
@@ -469,8 +560,20 @@
     gameCard.classList.add("is-invincible");
     emitDust(player.x + 44, groundY - 85, 42, "#31d7ff");
     emitDust(player.x + 44, groundY - 85, 28, "#dfff00");
-    showPowerMessage();
+    showPowerMessage("TAPORRA TRAVEI");
     blip(1480, 0.28, "sawtooth", 0.065);
+  }
+
+  function collectPizzaPower(obstacle) {
+    if (obstacle.collected) return;
+    obstacle.collected = true;
+    obstacle.x = -500;
+    invincibleTime = 8;
+    gameCard.classList.add("is-invincible");
+    emitDust(player.x + 44, groundY - 85, 48, "#ff9f1c");
+    emitDust(player.x + 44, groundY - 85, 30, "#ff2da8");
+    showPowerMessage("ARMA R$200 AIKKKKKKKK", true);
+    blip(1620, 0.34, "sawtooth", 0.07);
   }
 
   function updateObstacles(dt) {
@@ -557,7 +660,7 @@
   function frogMotion(obstacle) {
     const progress = clamp(obstacle.jumpTime / 1.55, 0, 1);
     const lift = obstacle.triggered
-      ? Math.sin(progress * Math.PI) * clamp(height * 0.255, 105, 140)
+      ? Math.sin(progress * Math.PI) * clamp(height * 0.335, 140, 185)
       : 0;
     return { progress, lift };
   }
@@ -566,7 +669,8 @@
     if (
       obstacle.type === "pineapple" ||
       obstacle.type === "pizzaCollectible" ||
-      obstacle.type === "energyCan"
+      obstacle.type === "energyCan" ||
+      obstacle.type === "pizzaPower"
     ) {
       const bob = Math.sin(obstacle.phase * 0.8) * 7;
       return {
@@ -627,6 +731,7 @@
         player.jumpY = 0;
         player.velocityY = 0;
         player.airborne = false;
+        player.jumpsUsed = 0;
         emitDust(player.x + 30, groundY - 3, 10, "#ff2da8");
         blip(170, 0.065, "triangle", 0.03);
       }
@@ -670,12 +775,12 @@
     skinModalReturn = returnTo;
     const featured = showUnlock ? featuredSkin : currentSkin;
     const details = SKIN_DETAILS[featured];
-    skinBadge.textContent = showUnlock ? "SKIN DESBLOQUEADA" : "VESTIÁRIO";
+    skinBadge.textContent = showUnlock ? "6SABE DESBLOQUEADO" : "VESTIÁRIO";
     skinTitle.innerHTML = showUnlock
       ? `VOCÊ ACHOU<br />O ${details.name}`
-      : "ESCOLHA SUA<br />SKIN";
+      : "ESCOLHA SEU<br />6SABE";
     skinShowcaseImage.src = details.asset;
-    skinShowcaseImage.alt = `Skin do ${details.name}`;
+    skinShowcaseImage.alt = `6sabe do ${details.name}`;
     skinShowcaseEcho.style.backgroundImage = `url("${details.asset}")`;
     updateSkinUI();
     skinUnlockModal.classList.add("is-open");
@@ -685,12 +790,24 @@
   function chooseSkin(skin) {
     if (skin === "nanzao" && !nanzaoUnlocked) return;
     if (skin === "pizzaGuido" && !pizzaGuidoUnlocked) return;
+    if (skin === "reiTorto" && !reiTortoUnlocked) return;
     currentSkin = skin;
     localStorage.setItem(SKIN_KEY, skin);
     updateSkinUI();
     skinUnlockModal.classList.remove("is-open");
     skinUnlockModal.setAttribute("aria-hidden", "true");
-    blip(skin === "pizzaGuido" ? 1120 : skin === "nanzao" ? 980 : 420, 0.14, "square", 0.04);
+    blip(
+      skin === "reiTorto"
+        ? 1260
+        : skin === "pizzaGuido"
+          ? 1120
+          : skin === "nanzao"
+            ? 980
+            : 420,
+      0.14,
+      "square",
+      0.04,
+    );
     draw();
     if (skinModalReturn === "gameover") openGameOver();
   }
@@ -763,6 +880,10 @@
         if (intersects(hitbox, obstacleRect(obstacle))) collectEnergyCan(obstacle);
         return false;
       }
+      if (obstacle.type === "pizzaPower") {
+        if (intersects(hitbox, obstacleRect(obstacle))) collectPizzaPower(obstacle);
+        return false;
+      }
 
       if (invincibleTime > 0 && intersects(hitbox, obstacleRect(obstacle))) {
         obstacle.x = -500;
@@ -824,11 +945,13 @@
   function drawPlayer() {
     const size = playerDimensions();
     const activePlayerImage =
-      currentSkin === "pizzaGuido" && pizzaGuidoUnlocked
-        ? images.pizzaGuido
-        : currentSkin === "nanzao" && nanzaoUnlocked
-          ? images.nanzao
-          : images.torto;
+      currentSkin === "reiTorto" && reiTortoUnlocked
+        ? images.reiTorto
+        : currentSkin === "pizzaGuido" && pizzaGuidoUnlocked
+          ? images.pizzaGuido
+          : currentSkin === "nanzao" && nanzaoUnlocked
+            ? images.nanzao
+            : images.torto;
     const top = groundY + player.jumpY - size.height;
     const stride = player.airborne ? 0 : Math.sin(player.runPhase) * 2.8;
     const duckShear = controls.duck && !player.airborne ? -0.24 : 0;
@@ -870,25 +993,26 @@
     if (
       obstacle.type === "pineapple" ||
       obstacle.type === "pizzaCollectible" ||
-      obstacle.type === "energyCan"
+      obstacle.type === "energyCan" ||
+      obstacle.type === "pizzaPower"
     ) {
       const bob = Math.sin(obstacle.phase * 0.8) * 7;
       const collectibleImage =
-        obstacle.type === "pizzaCollectible"
+        obstacle.type === "pizzaCollectible" || obstacle.type === "pizzaPower"
           ? images.pizzaCollectible
           : obstacle.type === "energyCan"
             ? images.energyCan
             : images.pineapple;
       ctx.translate(obstacle.x + obstacle.width / 2, obstacle.y + obstacle.height / 2 + bob);
       ctx.rotate(
-        obstacle.type === "pizzaCollectible"
+        obstacle.type === "pizzaCollectible" || obstacle.type === "pizzaPower"
           ? Math.sin(obstacle.phase * 0.48) * 0.18
           : obstacle.type === "energyCan"
             ? Math.sin(obstacle.phase * 0.65) * 0.08
             : Math.sin(obstacle.phase * 0.55) * 0.11,
       );
       ctx.shadowColor =
-        obstacle.type === "pizzaCollectible"
+        obstacle.type === "pizzaCollectible" || obstacle.type === "pizzaPower"
           ? "#ff9f1c"
           : obstacle.type === "energyCan"
             ? "#31d7ff"
@@ -1163,7 +1287,14 @@
   });
   becomeNanzaoButton.addEventListener("click", () => chooseSkin("nanzao"));
   becomePizzaGuidoButton.addEventListener("click", () => chooseSkin("pizzaGuido"));
+  becomeReiTortoButton.addEventListener("click", () => chooseSkin("reiTorto"));
   stayTortoButton.addEventListener("click", () => chooseSkin("torto"));
+  secretTortoTrigger.addEventListener("click", clickSecretTorto);
+  secretTortoTrigger.addEventListener("keydown", (event) => {
+    if (event.key !== "Enter" && event.key !== " ") return;
+    event.preventDefault();
+    clickSecretTorto();
+  });
   skinSwitchButton.addEventListener("click", () => openSkinUnlock("menu", false));
   gameOverSkinButton.addEventListener("click", () => {
     modal.classList.remove("is-open");

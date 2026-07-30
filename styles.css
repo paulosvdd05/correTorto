@@ -118,6 +118,25 @@ button {
     7px 7px 0 var(--ink);
 }
 
+.secret-torto-trigger {
+  cursor: pointer;
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.secret-torto-trigger.is-tapped {
+  animation: secret-tap 0.22s steps(2);
+}
+
+.secret-torto-trigger.is-unlocked {
+  color: #ffd45a;
+  text-shadow:
+    -4px 4px 0 #7d155e,
+    4px -2px 0 var(--acid),
+    7px 7px 0 var(--ink);
+}
+
 .hero p {
   margin: 0.9rem 0 0;
   color: rgba(247, 243, 233, 0.78);
@@ -443,6 +462,12 @@ button {
 
 .power-message.is-visible {
   animation: power-message 2.1s cubic-bezier(0.2, 0.85, 0.25, 1) both;
+}
+
+.power-message.is-pizza {
+  font-size: clamp(1.35rem, 6.6vw, 3.5rem);
+  line-height: 0.9;
+  letter-spacing: -0.04em;
 }
 
 .controls {
@@ -801,7 +826,8 @@ button {
 
 .nanzao-button,
 .torto-button,
-.pizza-guido-button {
+.pizza-guido-button,
+.rei-torto-button {
   position: relative;
   z-index: 2;
   width: 100%;
@@ -901,14 +927,33 @@ button {
   cursor: pointer;
 }
 
+.rei-torto-button {
+  margin-top: 10px;
+  border: var(--border);
+  color: var(--paper);
+  background: #7d155e;
+  box-shadow: 5px 5px 0 #ffd45a;
+  font: 900 0.75rem/1 "Arial Black", Impact, sans-serif;
+  letter-spacing: 0.05em;
+  cursor: pointer;
+}
+
 .torto-button:active {
   transform: translate(3px, 3px);
   box-shadow: 2px 2px 0 var(--cyan);
 }
 
-.pizza-guido-button:active {
+.pizza-guido-button:active,
+.rei-torto-button:active {
   transform: translate(3px, 3px);
   box-shadow: 2px 2px 0 var(--cyan);
+}
+
+@keyframes secret-tap {
+  50% {
+    transform: translateY(-5px) rotate(2deg) scale(1.06);
+    filter: hue-rotate(80deg);
+  }
 }
 
 @keyframes ticker {
