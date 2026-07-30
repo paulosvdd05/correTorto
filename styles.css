@@ -949,6 +949,27 @@ button {
   box-shadow: 2px 2px 0 var(--cyan);
 }
 
+@media (max-height: 760px) {
+  .skin-panel {
+    padding-top: 15px;
+    padding-bottom: 14px;
+  }
+
+  .skin-panel h2 {
+    margin-top: 0.55rem;
+    font-size: clamp(2rem, 10vw, 3rem);
+  }
+
+  .nanzao-showcase {
+    height: 150px;
+    min-height: 150px;
+  }
+
+  .skin-option {
+    min-height: 54px;
+  }
+}
+
 @keyframes secret-tap {
   50% {
     transform: translateY(-5px) rotate(2deg) scale(1.06);
